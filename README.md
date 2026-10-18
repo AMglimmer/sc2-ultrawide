@@ -1,5 +1,19 @@
 # sc2-ultrawide
 
+## China client build 98370 preview branch
+
+This branch adds signature support observed on the China client build 98370.
+See [Chinese setup and test limitations](README.zh-CN.md).
+The executable's file metadata reports 5.0.15.98370; the user reports 5.0.17.98370
+in their installation. Compatibility here is described by the loaded build, not that version label.
+One 3440×1440 campaign scene was tested. Health bars were reported as looking wider;
+no health-bar values are patched and this observation has not been isolated with a controlled comparison.
+Other campaign skins, mission transitions and helper lifecycle remain unverified on this build.
+
+Use `python sc2_ultrawide.py apply --no-helper` to fit the current console once without
+starting a background helper. The original `apply` helper behavior remains opt-in through
+running `apply` without this option. This is a preview, not an account-safety guarantee.
+
 StarCraft II limits its view to 16:9. On a wider monitor you get black bars on the sides or a stretched picture. This tool removes that limit while the game is running, so the game fills a 21:9 or 32:9 screen and the camera shows more of the screen. It also stretches the middle of the bottom console so the HUD frame reaches from the minimap to the command card instead of breaking into three pieces.
 
 It is a small Python tool. It switches two internal game settings on for a fraction of a second, resizes the game window, and switches them back. It then leaves a small helper running in the background that changes two numbers on the bottom console each time a mission loads, and stops when you close the game. It does not modify any game files, and closing the game undoes the change.

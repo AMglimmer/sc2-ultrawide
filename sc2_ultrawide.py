@@ -24,7 +24,7 @@ import sys
 
 from ultrawide.game import DISPLAY_WINDOWED, ORIGINAL_MAX_ASPECT, Game, is_wide, monitor_rect, set_window, window_size
 from ultrawide.memory import find_addresses, locate_cap
-from ultrawide.ui import HELPER_FLAG, console_state, fix_console, helper_running, run_helper, start_helper
+from ultrawide.ui import HELPER_FLAG, console_plan, console_state, fix_console, helper_running, run_helper, start_helper
 
 
 def print_status(game):
@@ -60,7 +60,9 @@ def main():
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("status", help="show build, window size, widescreen and console state")
-    sub.add_parser("apply", help="widen the window and keep the bottom console framed until the game closes")
+    apply_parser = sub.add_parser("apply", help="widen the window and keep the bottom console framed until the game closes")
+    apply_parser.add_argument("--no-helper", action="store_true",
+                              help="fit the current console once without starting a background helper")
     sub.add_parser("revert", help="resize the window back to 16:9 and put the console back")
     args = parser.parse_args()
 
@@ -80,12 +82,34 @@ def main():
         _, _, mw, mh = monitor_rect(hwnd)
         if args.cmd == "apply":
             if game.read_u32(game.addr.display_mode) != DISPLAY_WINDOWED:
-                print("note: set Display Mode to Windowed (Fullscreen) for this to hold.")
-            accepted, ms = set_window(game, hwnd, mw, mh, bypass=True)
+                raise SystemExit("Set Display Mode to Windowed (Fullscreen) first; nothing was written.")
+            stored = (game.read_u32(game.addr.stored_width), game.read_u32(game.addr.stored_height))
+            hud_only = (args.no_helper and window_size(hwnd) == (mw, mh)
+                        and mh > 0 and mw / mh > ORIGINAL_MAX_ASPECT + 0.01
+                        and console_plan(game, hwnd) is not None)
+            if hud_only:
+                # A mission may clear the fields used by the resize acceptance check.
+                # With a validated HUD and an already full-monitor client area, no resize
+                # or client-API flag writes are needed for the one-shot HUD operation.
+                accepted, ms = True, 0.0
+                print("apply: verified full-monitor window; updating the current HUD only.")
+            elif not all(0 < dimension <= 32768 for dimension in stored):
+                raise SystemExit("Engine window dimensions are unavailable; wait for the menu or mission. Nothing was written.")
+            elif window_size(hwnd) == (mw, mh) and stored == (mw, mh):
+                accepted, ms = True, 0.0
+            else:
+                accepted, ms = set_window(game, hwnd, mw, mh, bypass=True)
             cw, ch = window_size(hwnd)
             print(f"apply: window {cw}x{ch} ({'ok' if accepted else 'not accepted'}), "
                   f"flags set for {ms:.0f} ms")
-            if helper_running():
+            if not accepted:
+                raise SystemExit("Game did not accept the requested size; no console helper was started.")
+            if args.no_helper:
+                if fix_console(game, hwnd):
+                    print("apply: bottom console fitted once; no background helper started.")
+                else:
+                    print("apply: no console update needed or available; no background helper started.")
+            elif helper_running():
                 print("apply: the console helper is already running.")
             elif is_wide(hwnd):
                 start_helper()

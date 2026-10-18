@@ -115,7 +115,7 @@ def fix_console(game, hwnd, restore=False):
     if not plan or same(plan[2], plan[3]):
         return None
     frame, entry, _, (pos_x, scale_x) = plan
-    writer = Game(write=True)
+    writer = Game(write=True, pid=game.pid)
     try:
         writer.write_abs(entry + ENTRY_SCALE, struct.pack("<f", scale_x))
         writer.write_abs(entry + ENTRY_POSITION, struct.pack("<f", pos_x))
