@@ -8,7 +8,11 @@ The executable's file metadata reports 5.0.15.98370; the user reports 5.0.17.983
 in their installation. Compatibility here is described by the loaded build, not that version label.
 One 3440×1440 campaign scene was tested. Health bars were reported as looking wider;
 no health-bar values are patched and this observation has not been isolated with a controlled comparison.
-Other campaign skins, mission transitions and helper lifecycle remain unverified on this build.
+A subsequent mission transition automatically refitted the HUD with one helper process;
+duplicate apply did not spawn a second helper. Other skins, restart behavior and long-term
+stability remain unverified. Game-exit cleanup is covered by a mocked test, not a live shutdown.
+The Windows preview package includes a C# GUI launcher built with the existing .NET Framework
+compiler. It uses installed 64-bit Python via py.exe; keep the bundled Python sources beside it.
 
 Use `python sc2_ultrawide.py apply --no-helper` to fit the current console once without
 starting a background helper. The original `apply` helper behavior remains opt-in through

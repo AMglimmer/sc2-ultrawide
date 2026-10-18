@@ -21,6 +21,7 @@ import argparse
 import ctypes
 import struct
 import sys
+import time
 
 from ultrawide.game import DISPLAY_WINDOWED, ORIGINAL_MAX_ASPECT, Game, is_wide, monitor_rect, set_window, window_size
 from ultrawide.memory import find_addresses, locate_cap
@@ -84,13 +85,13 @@ def main():
             if game.read_u32(game.addr.display_mode) != DISPLAY_WINDOWED:
                 raise SystemExit("Set Display Mode to Windowed (Fullscreen) first; nothing was written.")
             stored = (game.read_u32(game.addr.stored_width), game.read_u32(game.addr.stored_height))
-            hud_only = (args.no_helper and window_size(hwnd) == (mw, mh)
+            hud_only = (window_size(hwnd) == (mw, mh)
                         and mh > 0 and mw / mh > ORIGINAL_MAX_ASPECT + 0.01
                         and console_plan(game, hwnd) is not None)
             if hud_only:
                 # A mission may clear the fields used by the resize acceptance check.
                 # With a validated HUD and an already full-monitor client area, no resize
-                # or client-API flag writes are needed for the one-shot HUD operation.
+                # or client-API flag writes are needed before HUD fitting/helper startup.
                 accepted, ms = True, 0.0
                 print("apply: verified full-monitor window; updating the current HUD only.")
             elif not all(0 < dimension <= 32768 for dimension in stored):
@@ -113,6 +114,12 @@ def main():
                 print("apply: the console helper is already running.")
             elif is_wide(hwnd):
                 start_helper()
+                for _ in range(20):
+                    if helper_running():
+                        break
+                    time.sleep(0.1)
+                if not helper_running():
+                    raise SystemExit("Console helper did not become ready; check the helper log.")
                 print("apply: a background helper keeps the bottom console framed until StarCraft II closes.")
         elif args.cmd == "revert":
             width = round(mh * ORIGINAL_MAX_ASPECT)

@@ -8,6 +8,7 @@ from unittest.mock import patch
 from ultrawide.game import Game
 from ultrawide.game import set_window
 from ultrawide.ui import fix_console
+from ultrawide.ui import run_helper
 from ultrawide.memory import CAP_SIGNATURES, ProcessMemory, locate_cap, find_model_entry_vtable
 
 
@@ -29,6 +30,46 @@ class FakeMemory:
 
 
 class CompatibilityTests(unittest.TestCase):
+    def test_helper_stops_when_game_window_disappears(self):
+        game = unittest.mock.Mock(pid=12345, build='98370')
+        with patch('ultrawide.ui.kernel32.CreateMutexW', return_value=1), \
+             patch('ultrawide.ui.kernel32.CloseHandle') as close_mutex, \
+             patch('ultrawide.ui.Game', return_value=game), \
+             patch('ultrawide.ui.find_addresses'), \
+             patch('ultrawide.ui.user32.IsWindow', side_effect=[True, False, False]), \
+             patch('ultrawide.ui.is_wide', return_value=True), \
+             patch('ultrawide.ui.fix_console', return_value=(0.06, 2.2)) as fit, \
+             patch('ultrawide.ui.helper_log') as log, \
+             patch('ultrawide.ui.time.sleep'):
+            run_helper()
+        fit.assert_called_once()
+        game.close.assert_called_once()
+        close_mutex.assert_called_once_with(1)
+        self.assertTrue(any('HUD fitted' in call.args[0] for call in log.call_args_list))
+
+    def test_helper_stops_on_write_error_instead_of_retrying_forever(self):
+        game = unittest.mock.Mock(pid=12345, build='98370')
+        with patch('ultrawide.ui.kernel32.CreateMutexW', return_value=1), \
+             patch('ultrawide.ui.kernel32.CloseHandle'), \
+             patch('ultrawide.ui.Game', return_value=game), \
+             patch('ultrawide.ui.find_addresses'), \
+             patch('ultrawide.ui.user32.IsWindow', return_value=True), \
+             patch('ultrawide.ui.is_wide', return_value=True), \
+             patch('ultrawide.ui.fix_console', side_effect=OSError('injected failure')) as fit, \
+             patch('ultrawide.ui.helper_log') as log:
+            run_helper()
+        fit.assert_called_once()
+        game.close.assert_called_once()
+        self.assertTrue(any('stopping after OSError' in call.args[0] for call in log.call_args_list))
+
+    def test_duplicate_helper_does_not_open_game(self):
+        with patch('ultrawide.ui.kernel32.CreateMutexW', return_value=1), \
+             patch('ultrawide.ui.kernel32.CloseHandle'), \
+             patch('ultrawide.ui.ctypes.get_last_error', return_value=183), \
+             patch('ultrawide.ui.Game') as factory:
+            run_helper()
+        factory.assert_not_called()
+
     def test_invalid_engine_size_stops_before_mutation(self):
         import sc2_ultrawide as cli
         game = unittest.mock.Mock()
