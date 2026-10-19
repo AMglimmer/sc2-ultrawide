@@ -6,8 +6,13 @@ This branch adds signature support observed on the China client build 98370.
 See [Chinese setup and test limitations](README.zh-CN.md).
 The executable's file metadata reports 5.0.15.98370; the user reports 5.0.17.98370
 in their installation. Compatibility here is described by the loaded build, not that version label.
-One 3440×1440 campaign scene was tested. Health bars were reported as looking wider;
-no health-bar values are patched and this observation has not been isolated with a controlled comparison.
+The optional health-bar preview adds exact-build native drawing callbacks for 3440×1440:
+it scales recognized segmented and composite status geometry horizontally, including borders
+and gaps, while preserving cell counts, colors, Y/Z and UVs. It must be enabled separately and
+requires the GUI to remain open. See [preview instructions](README.healthbars-preview.zh-CN.md)
+and [native callback review notes](NATIVE_HEALTHBARS.md).
+**Transport cargo/loading slots remain distorted (reported on the Warp Prism); this preview
+does not fix them.** Unsegmented bars and other builds/resolutions remain unsupported by this feature.
 A subsequent mission transition automatically refitted the HUD with one helper process;
 duplicate apply did not spawn a second helper. Other skins, restart behavior and long-term
 stability remain unverified. Game-exit cleanup is covered by a mocked test, not a live shutdown.
@@ -15,6 +20,13 @@ The Portable build (`SC2-Ultrawide-Portable.exe`) bundles Python and Tk using Py
 no Python installation or adjacent source files are required. Build with `build-portable.ps1`
 after installing `requirements-build.txt` in `.venv-build`. The older preview.2 C# launcher
 still requires installed Python and adjacent sources. Logs are stored beside the executable.
+
+The separate `SC2-Ultrawide-Healthbars-Preview.exe` is built with
+`build-portable.ps1 -HealthbarsPreview`. Its callbacks change writable object vtable pointers
+and execute newly allocated code, which is a deeper modification than the original HUD fix.
+It is not an account-safety guarantee. All 28 offline tests, including native child-process
+contracts, pass; live injury/mission-transition observations and a packaged 15-second run
+were checked. See the preview documentation for remaining limits.
 
 Use `python sc2_ultrawide.py apply --no-helper` to fit the current console once without
 starting a background helper. The original `apply` helper behavior remains opt-in through
