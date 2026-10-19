@@ -11,8 +11,10 @@ no health-bar values are patched and this observation has not been isolated with
 A subsequent mission transition automatically refitted the HUD with one helper process;
 duplicate apply did not spawn a second helper. Other skins, restart behavior and long-term
 stability remain unverified. Game-exit cleanup is covered by a mocked test, not a live shutdown.
-The Windows preview package includes a C# GUI launcher built with the existing .NET Framework
-compiler. It uses installed 64-bit Python via py.exe; keep the bundled Python sources beside it.
+The Portable build (`SC2-Ultrawide-Portable.exe`) bundles Python and Tk using PyInstaller;
+no Python installation or adjacent source files are required. Build with `build-portable.ps1`
+after installing `requirements-build.txt` in `.venv-build`. The older preview.2 C# launcher
+still requires installed Python and adjacent sources. Logs are stored beside the executable.
 
 Use `python sc2_ultrawide.py apply --no-helper` to fit the current console once without
 starting a background helper. The original `apply` helper behavior remains opt-in through

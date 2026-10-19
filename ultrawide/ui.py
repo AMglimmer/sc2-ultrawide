@@ -38,10 +38,11 @@ IDENT = re.compile(rb"[A-Za-z][A-Za-z0-9_]{1,63}\0")
 HELPER_FLAG = "--console-helper"   # internal: run as the background console helper
 HELPER_MUTEX = "sc2_ultrawide_console_helper"
 ENTRY_SCRIPT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "sc2_ultrawide.py")
+APP_DIRECTORY = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else os.path.dirname(ENTRY_SCRIPT)
 
 
 def helper_log(message):
-    directory = os.environ.get("SC2_ULTRAWIDE_LOG_DIR", os.path.join(os.path.dirname(ENTRY_SCRIPT), "logs"))
+    directory = os.environ.get("SC2_ULTRAWIDE_LOG_DIR", os.path.join(APP_DIRECTORY, "logs"))
     try:
         os.makedirs(directory, exist_ok=True)
         with open(os.path.join(directory, "helper.log"), "a", encoding="utf-8") as stream:
@@ -158,8 +159,14 @@ def helper_running():
 
 def start_helper():
     """Start the console helper as a detached background process with no window."""
+    frozen = getattr(sys, "frozen", False)
+    command = [sys.executable, HELPER_FLAG] if frozen else [sys.executable, ENTRY_SCRIPT, HELPER_FLAG]
+    environment = os.environ.copy()
+    if frozen:
+        # The helper outlives the GUI: give its onefile runtime independent temp files.
+        environment["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
     return subprocess.Popen(
-        [sys.executable, ENTRY_SCRIPT, HELPER_FLAG],
+        command, env=environment,
         creationflags=DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP, close_fds=True,
         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 

@@ -114,7 +114,8 @@ def main():
                 print("apply: the console helper is already running.")
             elif is_wide(hwnd):
                 start_helper()
-                for _ in range(20):
+                # A bundled onefile helper must unpack its own runtime on cold start.
+                for _ in range(150 if getattr(sys, "frozen", False) else 20):
                     if helper_running():
                         break
                     time.sleep(0.1)

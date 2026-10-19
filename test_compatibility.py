@@ -9,6 +9,20 @@ from ultrawide.game import Game
 from ultrawide.game import set_window
 from ultrawide.ui import fix_console
 from ultrawide.ui import run_helper
+from ultrawide.ui import start_helper, HELPER_FLAG, ENTRY_SCRIPT
+
+
+class FrozenHelperTests(unittest.TestCase):
+    def test_frozen_helper_has_independent_runtime(self):
+        with patch.object(sys, 'frozen', True, create=True), patch('ultrawide.ui.subprocess.Popen') as spawn:
+            start_helper()
+        self.assertEqual(spawn.call_args.args[0], [sys.executable, HELPER_FLAG])
+        self.assertEqual(spawn.call_args.kwargs['env']['PYINSTALLER_RESET_ENVIRONMENT'], '1')
+
+    def test_source_helper_keeps_script_entry(self):
+        with patch.object(sys, 'frozen', False, create=True), patch('ultrawide.ui.subprocess.Popen') as spawn:
+            start_helper()
+        self.assertEqual(spawn.call_args.args[0], [sys.executable, ENTRY_SCRIPT, HELPER_FLAG])
 from ultrawide.memory import CAP_SIGNATURES, ProcessMemory, locate_cap, find_model_entry_vtable
 
 
